@@ -1,12 +1,12 @@
 package com.voodoodyne.jackson.jsog;
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import org.testng.annotations.Test;
+import tools.jackson.databind.DefaultTyping;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 
-
-import java.io.IOException;
 import java.util.Date;
 
 /**
@@ -15,48 +15,51 @@ import java.util.Date;
  */
 public class Issue15Test {
 
-  @Test // always works
-  public void testIssue5WorkaroundObject() throws IOException {
-    testWithPolymorphicStrategy(ObjectMapper.DefaultTyping.JAVA_LANG_OBJECT);
+    @Test // always works
+    public void testIssue5WorkaroundObject() {
+        testWithPolymorphicStrategy(DefaultTyping.JAVA_LANG_OBJECT);
 
-  }
-  @Test // works with Jackson 2.5.4+
-  public void testIssue5WorkaroundObjectAndNonConcrete() throws IOException {
-    testWithPolymorphicStrategy(ObjectMapper.DefaultTyping.OBJECT_AND_NON_CONCRETE);
+    }
 
-  }
-  @Test // works with Jackson 2.5.4+
-  public void testIssue5WorkaroundNonConcreteAndArrays() throws IOException {
-    testWithPolymorphicStrategy(ObjectMapper.DefaultTyping.NON_CONCRETE_AND_ARRAYS);
+    @Test
+    public void testIssue5WorkaroundObjectAndNonConcrete() {
+        testWithPolymorphicStrategy(DefaultTyping.OBJECT_AND_NON_CONCRETE);
 
-  }
-  @Test // fails on Jackson 2.8.8 (no working version as of this date) unless JSOGRef is a final class
-  public void testIssue5WorkaroundNonFinal() throws IOException {
-    testWithPolymorphicStrategy(ObjectMapper.DefaultTyping.NON_FINAL);
-  }
+    }
 
-  private void testWithPolymorphicStrategy(ObjectMapper.DefaultTyping typingStragegy) throws IOException {
-    Thing t = new Thing();
-    t.setName("foo");
+    @Test
+    public void testIssue5WorkaroundNonConcreteAndArrays() {
+        testWithPolymorphicStrategy(DefaultTyping.NON_CONCRETE_AND_ARRAYS);
 
-    t.setDate(new Date());
+    }
 
-    ObjectMapper mapper = new ObjectMapper();
-    mapper.enableDefaultTyping(typingStragegy);
+    @Test
+    public void testIssue5WorkaroundNonFinal() {
+        testWithPolymorphicStrategy(DefaultTyping.NON_FINAL);
+    }
 
-    // issue is JSOG specific since removing this line causes all tests to
-    // pass in 2.5.4 (did not test earlier)
-    mapper.addMixIn(Object.class, JSOGMixin.class);
+    private void testWithPolymorphicStrategy(DefaultTyping typingStragegy) {
+        Thing t = new Thing();
+        t.setName("foo");
 
-    // No difference if we use the module workaround from Issue #5
+        t.setDate(new Date());
 
-//    SimpleModule jModule = new SimpleModule();
-//    jModule.setMixInAnnotation(Object.class, JSOGMixin.class);
-//    mapper.registerModule(jModule);
+        BasicPolymorphicTypeValidator typeValidator = BasicPolymorphicTypeValidator
+                .builder()
+                .allowIfBaseType(Thing.class)
+                .allowIfBaseType(Date.class)
+                .build();
 
-    String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(t);
-    mapper.readValue(json, Thing.class);
-  }
+        ObjectMapper mapper = JsonMapper.builder()
+                .activateDefaultTyping(typeValidator, typingStragegy)
+                .addMixIn(Object.class, JSOGMixin.class)
+                .build();
 
-  @JsonIdentityInfo(generator = JSOGGenerator.class) private static class JSOGMixin {}
+        String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(t);
+        mapper.readValue(json, Thing.class);
+    }
+
+    @JsonIdentityInfo(generator = JSOGGenerator.class)
+    private static class JSOGMixin {
+    }
 }
