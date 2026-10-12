@@ -4,65 +4,80 @@ import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
-import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.testng.annotations.Test;
+import tools.jackson.databind.ObjectMapper;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
 public class PolymorphicTest {
 
-	@JsonIdentityInfo(generator=JSOGGenerator.class)
-	@JsonTypeInfo(use=Id.CLASS, include=As.PROPERTY, property="@class")
-	public static class Inner {
-		public String bar;
+    @JsonIdentityInfo(generator = JSOGGenerator.class)
+    @JsonTypeInfo(use = Id.CLASS, include = As.PROPERTY, property = "@class")
+    public static class Inner {
+        public String bar;
 
-		public Inner() {}
-		public Inner(String bar) { this.bar = bar; }
-	}
+        public Inner() {
+        }
 
-	public static class SubInner extends Inner {
-		public String extra;
+        public Inner(String bar) {
+            this.bar = bar;
+        }
+    }
 
-		public SubInner() {}
-		public SubInner(String bar, String extra) {
-			super(bar);
-			this.extra = extra;
-		}
-	}
+    public static class SubInner extends Inner {
+        public String extra;
 
-	@JsonIdentityInfo(generator=JSOGGenerator.class)
-	public static class Outer {
-		public String foo;
-		public Inner inner1;
-		public Inner inner2;
-	}
+        public SubInner() {
+        }
 
-	/** Expected output */
-	private static final String JSOGIFIED = "{\"@id\":\"1\",\"foo\":\"foo\",\"inner1\":{\"@class\":\"com.voodoodyne.jackson.jsog.PolymorphicTest$SubInner\",\"@id\":\"2\",\"bar\":\"bar\",\"extra\":\"extra\"},\"inner2\":{\"@ref\":\"2\"}}";
+        public SubInner(String bar, String extra) {
+            super(bar);
+            this.extra = extra;
+        }
+    }
 
-	/** */
-	ObjectMapper mapper = new ObjectMapper();
+    @JsonIdentityInfo(generator = JSOGGenerator.class)
+    public static class Outer {
+        public String foo;
+        public Inner inner1;
+        public Inner inner2;
+    }
 
-	/** */
-	@Test
-	public void serializationWorks() throws Exception {
-		Outer outer = new Outer();
-		outer.foo = "foo";
-		outer.inner1 = outer.inner2 = new SubInner("bar", "extra");
+    /**
+     * Expected output
+     */
+    private static final String JSOGIFIED = "{\"@id\":\"1\",\"foo\":\"foo\",\"inner1\":{\"@class\":\"com.voodoodyne.jackson.jsog.PolymorphicTest$SubInner\",\"@id\":\"2\",\"bar\":\"bar\",\"extra\":\"extra\"},\"inner2\":{\"@ref\":\"2\"}}";
 
-		String jsog = mapper.writeValueAsString(outer);
+    /**
+     *
+     */
+    ObjectMapper mapper = new ObjectMapper();
 
-		System.out.println("Serialized to: " + jsog);
+    /**
+     *
+     */
+    @Test
+    public void serializationWorks() {
+        Outer outer = new Outer();
+        outer.foo = "foo";
+        outer.inner1 = outer.inner2 = new SubInner("bar", "extra");
 
-		assertThat(jsog, equalTo(JSOGIFIED));
-	}
+        String jsog = mapper.writeValueAsString(outer);
 
-	/**
-	 */
-	//@Test
-	public void deserializationWorks() throws Exception {
-		Outer outer = mapper.readValue(JSOGIFIED, Outer.class);
+        System.out.println("Serialized to: " + jsog);
 
-		assert outer.inner1 == outer.inner2;
-	}
+        assertThat(jsog, equalTo(JSOGIFIED));
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void deserializationWorks() {
+        Outer outer = mapper.readValue(JSOGIFIED, Outer.class);
+
+        assert outer.inner1 == outer.inner2;
+    }
 }

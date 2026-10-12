@@ -1,7 +1,5 @@
 package com.voodoodyne.jackson.jsog;
 
-
-
 import com.fasterxml.jackson.annotation.ObjectIdGenerator;
 
 /**
